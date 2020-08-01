@@ -1,4 +1,4 @@
-package com.reinforcedmc.deathswap;
+package com.reinforcedmc.blockshuffle;
 
 import com.reinforcedmc.gameapi.GameAPI;
 import com.reinforcedmc.gameapi.GameStatus;
@@ -6,7 +6,6 @@ import com.reinforcedmc.gameapi.events.GamePreStartEvent;
 import com.reinforcedmc.gameapi.events.GameSetupEvent;
 import com.reinforcedmc.gameapi.events.GameStartEvent;
 import com.reinforcedmc.gameapi.scoreboard.UpdateScoreboardEvent;
-import org.apache.commons.io.FileUtils;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -15,24 +14,20 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.FileUtil;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.*;
 
-public final class DeathSwap extends JavaPlugin implements Listener {
+public final class BlockShuffle extends JavaPlugin implements Listener {
 
     public static ArrayList<UUID> ingame = new ArrayList<>();
-    private Swap swap;
+    private Shuffle swap;
 
-    private static DeathSwap instance;
+    private static BlockShuffle instance;
 
     private World world;
     private Location spawn;
@@ -60,13 +55,13 @@ public final class DeathSwap extends JavaPlugin implements Listener {
 
     public void createWorld() {
 
-        if(Bukkit.getWorld("DeathSwap") != null) {
-            Bukkit.unloadWorld("DeathSwap", false);
+        if(Bukkit.getWorld("BlockShuffle") != null) {
+            Bukkit.unloadWorld("BlockShuffle", false);
         }
-        File folder = new File(Bukkit.getWorldContainer()+"/DeathSwap");
+        File folder = new File(Bukkit.getWorldContainer()+"/BlockShuffle");
         folder.delete();
 
-        WorldCreator creator = new WorldCreator("DeathSwap");
+        WorldCreator creator = new WorldCreator("BlockShuffle");
         creator.environment(World.Environment.NORMAL);
         creator.generateStructures(true);
         world = creator.createWorld();
@@ -86,7 +81,7 @@ public final class DeathSwap extends JavaPlugin implements Listener {
 
             boolean notocean = false;
 
-            Location location = Bukkit.getWorld("DeathSwap").getSpawnLocation();
+            Location location = Bukkit.getWorld("BlockShuffle").getSpawnLocation();
 
             while(!notocean) {
                 location = new Location(world, 0, 0, 0); // New Location in the right World you want
@@ -130,7 +125,7 @@ public final class DeathSwap extends JavaPlugin implements Listener {
                         ingame.add(uuid);
                     }
 
-                    swap = new Swap(15);
+                    swap = new Shuffle(15);
                     swap.start();
 
                     Bukkit.broadcastMessage(GameAPI.getInstance().currentGame.getPrefix() + ChatColor.GRAY + " has started. " + ChatColor.YELLOW + "Last one to survive wins!");
@@ -144,10 +139,10 @@ public final class DeathSwap extends JavaPlugin implements Listener {
     }
 
     public static void log(Object object) {
-        System.out.println("[DeathSwap] " + object.toString());
+        System.out.println("[BlockShuffle] " + object.toString());
     }
 
-    public static DeathSwap getInstance() {
+    public static BlockShuffle getInstance() {
         return instance;
     }
 
@@ -328,7 +323,7 @@ public final class DeathSwap extends JavaPlugin implements Listener {
     @EventHandler
     public void onSBUpdate(UpdateScoreboardEvent e) {
 
-        if (GameAPI.getInstance().currentGame.getName() != "DeathSwap" || GameAPI.getInstance().status != GameStatus.INGAME) {
+        if (GameAPI.getInstance().currentGame.getName() != "BlockShuffle" || GameAPI.getInstance().status != GameStatus.INGAME) {
             return;
         }
 

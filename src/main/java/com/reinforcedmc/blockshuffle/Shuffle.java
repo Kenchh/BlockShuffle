@@ -1,4 +1,4 @@
-package com.reinforcedmc.deathswap;
+package com.reinforcedmc.blockshuffle;
 
 import com.reinforcedmc.gameapi.GameAPI;
 import org.bukkit.Bukkit;
@@ -6,25 +6,25 @@ import org.bukkit.ChatColor;
 import org.bukkit.Sound;
 import org.bukkit.scheduler.BukkitRunnable;
 
-public class Swap extends BukkitRunnable {
+public class Shuffle extends BukkitRunnable {
 
     public final long interval;
     public long remaining;
 
-    public Swap(long interval) {
+    public Shuffle(long interval) {
         this.interval = interval;
         this.remaining = interval;
     }
 
     public void start() {
-        this.runTaskTimer(DeathSwap.getInstance(), 0, 20);
+        this.runTaskTimer(BlockShuffle.getInstance(), 0, 20);
     }
 
     @Override
     public void run() {
         if (remaining <= 0) {
             Bukkit.broadcastMessage(ChatColor.RED + ChatColor.BOLD.toString() + "Players have been swapped!");
-            DeathSwap.swap();
+            BlockShuffle.swap();
             Bukkit.getOnlinePlayers().forEach((p) -> p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1F, 0.8F));
 
             remaining = interval;

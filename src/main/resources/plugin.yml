@@ -1,6 +1,6 @@
-name: DeathSwap
+name: BlockShuffle
 version: ${project.version}
-main: com.reinforcedmc.deathswap.DeathSwap
+main: com.reinforcedmc.BlockShuffle.BlockShuffle
 api-version: 1.15
 load: STARTUP
 authors: [rey, freakz]
