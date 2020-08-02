@@ -214,20 +214,10 @@ public class BlockShuffle extends JavaPlugin implements Listener {
         return alive;
     }
 
-    /*
-    NETHER CANCEL
-     */
-    @EventHandler
-    public void onPortal(PlayerPortalEvent e) {
-        e.setCancelled(true);
-    }
-
     @EventHandler
     public void onTeleport(PlayerTeleportEvent e) {
 
         if (e.getCause().equals(PlayerTeleportEvent.TeleportCause.END_PORTAL))
-            e.setCancelled(true);
-        if (e.getCause().equals(PlayerTeleportEvent.TeleportCause.NETHER_PORTAL))
             e.setCancelled(true);
         if (e.getCause().equals(PlayerTeleportEvent.TeleportCause.END_GATEWAY))
             e.setCancelled(true);
