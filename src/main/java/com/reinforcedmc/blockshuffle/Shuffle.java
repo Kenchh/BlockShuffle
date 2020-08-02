@@ -4,11 +4,12 @@ import com.reinforcedmc.gameapi.GameAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Sound;
+import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public class Shuffle extends BukkitRunnable {
 
-    public final long interval;
+    public long interval;
     public long remaining;
 
     public Shuffle(long interval) {
@@ -23,31 +24,49 @@ public class Shuffle extends BukkitRunnable {
     @Override
     public void run() {
         if (remaining <= 0) {
-            Bukkit.broadcastMessage(ChatColor.RED + ChatColor.BOLD.toString() + "Players have been swapped!");
-            BlockShuffle.swap();
-            Bukkit.getOnlinePlayers().forEach((p) -> p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1F, 0.8F));
 
+            BlockShuffle.getInstance().shuffle();
             remaining = interval;
         } else {
 
-            if (remaining == 30) {
-                String text = String.format(ChatColor.RED + ChatColor.BOLD.toString() + "Death Swap will ocurr in %s seconds.", remaining);
-                Bukkit.broadcastMessage(text);
-                Bukkit.getOnlinePlayers().forEach((p) -> p.playSound(p.getLocation(), Sound.UI_BUTTON_CLICK, 1F, 1F));
+
+            if(remaining == 60) {
+                Bukkit.broadcastMessage(ChatColor.RED + ChatColor.BOLD.toString() + "Blocks will shuffle in " + remaining + " seconds!");
             }
 
-            if (remaining <= 5) {
-                String text = String.format(ChatColor.RED + ChatColor.BOLD.toString() + "Death Swap will ocurr in %s seconds.", remaining);
-                Bukkit.broadcastMessage(text);
-                for(int i=0;i<=3;i++) {
-                    Bukkit.getOnlinePlayers().forEach((p) -> p.playSound(p.getLocation(), Sound.BLOCK_STONE_PLACE, 1F, 0.6F));
-                    new BukkitRunnable() {
-                        @Override
-                        public void run() {
-                            Bukkit.getOnlinePlayers().forEach((p) -> p.playSound(p.getLocation(), Sound.BLOCK_STONE_PLACE, 1F, 0.1F));
+            if(remaining == 30) {
+                Bukkit.broadcastMessage(ChatColor.RED + ChatColor.BOLD.toString() + "Blocks will shuffle in " + remaining + " seconds!");
+            }
+
+            if(remaining == 15) {
+                Bukkit.broadcastMessage(ChatColor.RED + ChatColor.BOLD.toString() + "Blocks will shuffle in " + remaining + " seconds!");
+            }
+
+            if(remaining == 5) {
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        for(Player p : Bukkit.getOnlinePlayers()) {
+                            p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1F, 1.2F);
+                            new BukkitRunnable() {
+                                @Override
+                                public void run() {
+                                    p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1F, 0.8F);
+                                }
+                            }.runTaskLater(BlockShuffle.getInstance(), 3L);
                         }
-                    }.runTaskLater(GameAPI.getInstance(), 5L);
-                }
+
+                        if(remaining > 5) {
+                            this.cancel();
+                        }
+
+                    }
+                }.runTaskTimer(BlockShuffle.getInstance(), 0L, 3L);
+
+            }
+
+            if(remaining <= 5) {
+                Bukkit.broadcastMessage(ChatColor.RED + ChatColor.BOLD.toString() + "Blocks will shuffle in " + remaining + " seconds!");
             }
 
             remaining--;

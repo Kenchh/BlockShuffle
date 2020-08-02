@@ -1,6 +1,6 @@
 name: BlockShuffle
 version: ${project.version}
-main: com.reinforcedmc.BlockShuffle.BlockShuffle
+main: com.reinforcedmc.blockshuffle.BlockShuffle
 api-version: 1.15
 load: STARTUP
 authors: [rey, freakz]

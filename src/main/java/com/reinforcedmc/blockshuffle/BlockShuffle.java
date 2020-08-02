@@ -8,6 +8,7 @@ import com.reinforcedmc.gameapi.events.GameStartEvent;
 import com.reinforcedmc.gameapi.scoreboard.UpdateScoreboardEvent;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -22,10 +23,13 @@ import org.bukkit.scheduler.BukkitRunnable;
 import java.io.File;
 import java.util.*;
 
-public final class BlockShuffle extends JavaPlugin implements Listener {
+public class BlockShuffle extends JavaPlugin implements Listener {
 
-    public static ArrayList<UUID> ingame = new ArrayList<>();
-    private Shuffle swap;
+    public static HashMap<UUID, ShuffleProfile> shuffleProfiles = new HashMap<>();
+    private Shuffle shuffle;
+
+    public static Difficulty difficulty = Difficulty.EASY;
+    public static int round = 1;
 
     private static BlockShuffle instance;
 
@@ -51,6 +55,11 @@ public final class BlockShuffle extends JavaPlugin implements Listener {
     public void onSetup(GameSetupEvent e) {
         createWorld();
         e.openServer();
+
+        difficulty = Difficulty.EASY;
+        shuffleProfiles.clear();
+        round = 0;
+
     }
 
     public void createWorld() {
@@ -109,26 +118,20 @@ public final class BlockShuffle extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onStart(GameStartEvent e) {
-        start();
-    }
-
-
-    public void start() {
         new BukkitRunnable() {
             @Override
             public void run() {
                 if (GameAPI.getInstance().ingame.size() > 1) {
 
-                    ingame.clear();
-
                     for(UUID uuid : GameAPI.getInstance().ingame) {
-                        ingame.add(uuid);
+                        shuffleProfiles.put(uuid, new ShuffleProfile(uuid));
                     }
 
-                    swap = new Shuffle(15);
-                    swap.start();
+                    shuffle = new Shuffle(30);
+                    shuffle.start();
 
-                    Bukkit.broadcastMessage(GameAPI.getInstance().currentGame.getPrefix() + ChatColor.GRAY + " has started. " + ChatColor.YELLOW + "Last one to survive wins!");
+                    Bukkit.broadcastMessage(GameAPI.getInstance().currentGame.getPrefix() + ChatColor.GRAY + " has started. " + ChatColor.YELLOW + "The player who finds the most blocks wins!");
+                    assignBlocks();
 
                     this.cancel();
                 } else {
@@ -148,44 +151,61 @@ public final class BlockShuffle extends JavaPlugin implements Listener {
 
     static HashMap<Player, Player> players = new HashMap<>();
 
-    public static void swap() {
+    public void assignBlocks() {
 
-        HashMap<Player, Location> plocs = new HashMap<>();
-        ArrayList<UUID> reserved = new ArrayList<>();
+        if(getAlive().size() <= 1) {
+            return;
+        }
 
-        for(UUID uuid : ingame) {
-            Player p = Bukkit.getPlayer(uuid);
+        round++;
 
-            int maxtries = 3;
-            UUID tp = p.getUniqueId();
-            if(ingame.size() >= 3) {
-                /* Loop, that searches for a valid player to teleport to. */
-                while ((tp.equals(uuid) || reserved.contains(tp) || (players.containsKey(Bukkit.getPlayer(tp)) && players.get(Bukkit.getPlayer(tp)).getUniqueId() == uuid)) && maxtries > 0) {
-                    tp = ingame.get(new Random().nextInt(ingame.size()));
-                    maxtries--;
-                }
-            } else {
-                for(Player pp : Bukkit.getOnlinePlayers()) {
-                    if(!p.getUniqueId().equals(pp.getUniqueId())) {
-                        tp = pp.getUniqueId();
-                        break;
-                    }
+        if(round == 3) difficulty = Difficulty.MEDIUM;
+        if(round == 5) difficulty = Difficulty.HARD;
+        if(round == 8) difficulty = Difficulty.HARDCORE;
+
+        if(difficulty != Difficulty.EASY) {
+            shuffle.interval = 5*60;
+        }
+
+        shuffle.remaining = shuffle.interval;
+
+        for(ShuffleProfile sp : shuffleProfiles.values()) {
+            sp.setRandomBlock();
+        }
+    }
+
+    public void shuffle() {
+
+        for(Player p : Bukkit.getOnlinePlayers()) {
+            p.playSound(p.getLocation(), Sound.ENTITY_BAT_TAKEOFF, 1F, 0.5F);
+        }
+
+        int deadplayers = 0;
+
+        for(ShuffleProfile sp : shuffleProfiles.values()) {
+            if(!sp.foundBlock) {
+                deadplayers++;
+            }
+        }
+
+        if(deadplayers >= getAlive().size()) {
+            shuffleProfiles.clear();
+            update();
+        } else {
+
+            for(ShuffleProfile sp : shuffleProfiles.values()) {
+                if(!sp.foundBlock) {
+                    sp.getPlayer().setHealth(0);
                 }
             }
-            players.put(p, Bukkit.getPlayer(tp));
-            reserved.add(tp);
-            plocs.put(p, Bukkit.getPlayer(tp).getLocation());
-        }
 
-        for(Player p : plocs.keySet()) {
-            p.teleport(plocs.get(p));
+            assignBlocks();
         }
-
     }
 
     public static ArrayList<Player> getAlive() {
         ArrayList<Player> alive = new ArrayList<>();
-        for (UUID uuid : ingame){
+        for (UUID uuid : shuffleProfiles.keySet()) {
             Player player = Bukkit.getServer().getPlayer(uuid);
             if (player == null || !player.isOnline()) continue;
             alive.add(player);
@@ -244,6 +264,52 @@ public final class BlockShuffle extends JavaPlugin implements Listener {
     }
 
     @EventHandler
+    public void onMove(PlayerMoveEvent e) {
+        Player p = e.getPlayer();
+        if(shuffleProfiles.containsKey(e.getPlayer().getUniqueId())) {
+            ShuffleProfile sp = shuffleProfiles.get(e.getPlayer().getUniqueId());
+            if(!sp.foundBlock) {
+                if(e.getTo().getBlock().getType() == sp.getBlock() || e.getTo().getBlock().getRelative(BlockFace.DOWN).getType() == sp.getBlock()) {
+
+                    Bukkit.broadcastMessage(ChatColor.GRAY + ChatColor.BOLD.toString() + e.getPlayer().getName() + " has found their block!");
+
+                    for(int i=0;i<3;i++) {
+                        p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1F, 1.2F);
+                        new BukkitRunnable() {
+                            @Override
+                            public void run() {
+                                p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1F, 1.6F);
+                            }
+                        }.runTaskLater(BlockShuffle.getInstance(), 3L);
+                    }
+
+                    sp.foundBlock = true;
+
+                    boolean allfound = true;
+                    for(ShuffleProfile spp : shuffleProfiles.values()) {
+                        if(!spp.foundBlock) {
+                            allfound = false;
+                            break;
+                        }
+                    }
+
+                    if(allfound) {
+                        Bukkit.broadcastMessage(ChatColor.GOLD + "Everyone has found their block!");
+                        shuffle.remaining = shuffle.interval;
+                        new BukkitRunnable() {
+                            @Override
+                            public void run() {
+                                shuffle();
+                            }
+                        }.runTaskLater(this, 40L);
+                    }
+
+                }
+            }
+        }
+    }
+
+    @EventHandler
     public void onRespawn(PlayerRespawnEvent e) {
 
         if (!getAlive().isEmpty()) {
@@ -257,20 +323,19 @@ public final class BlockShuffle extends JavaPlugin implements Listener {
     public void onDie(PlayerDeathEvent e) {
         Player p = e.getEntity();
 
-        if(ingame.contains(p.getUniqueId())) {
+        if(shuffleProfiles.containsKey(p.getUniqueId())) {
 
-            ingame.remove(p.getUniqueId());
+            int old = shuffleProfiles.size();
+
+            shuffleProfiles.remove(p.getUniqueId());
             Bukkit.getScheduler().scheduleSyncDelayedTask(this, () -> p.spigot().respawn(), 1L);
 
             if(getAlive().size() > 1) {
-                if (swap.interval - swap.remaining > 60) {
-                    e.setDeathMessage(ChatColor.RED + ChatColor.BOLD.toString() + p.getName() + " has died! " + ingame.size() + " remaining.");
-                } else {
-                    e.setDeathMessage(ChatColor.RED + ChatColor.BOLD.toString() + p.getName() + " died to " + players.get(p).getName() + "'s trap.");
-                }
+                e.setDeathMessage(ChatColor.RED.toString() + (old - getAlive().size()) + " players haven't found their block in time!");
+                e.setDeathMessage(ChatColor.RED.toString() + getAlive() + " players remain!");
+            } else {
+                e.setDeathMessage(null);
             }
-
-            e.setDeathMessage(null);
 
             GameAPI.getInstance().getAPI().putInSpectator(p);
 
@@ -282,17 +347,17 @@ public final class BlockShuffle extends JavaPlugin implements Listener {
 
         if(GameAPI.getInstance().status != GameStatus.INGAME) return;
 
-        if (getAlive().size() <= 1) {
+        if (getAlive().size() == 1) {
 
             Player winner = getAlive().get(0);
-            swap.cancel();
+            shuffle.cancel();
             GameAPI.getInstance().getAPI().endGame(winner);
 
         }
 
-        if(ingame.isEmpty()) {
+        if(shuffleProfiles.isEmpty()) {
 
-            swap.cancel();
+            shuffle.cancel();
             GameAPI.getInstance().getAPI().endGame(null);
 
         }
@@ -315,8 +380,8 @@ public final class BlockShuffle extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onLog(PlayerQuitEvent e) {
-        if (!ingame.contains(e.getPlayer().getUniqueId())) return;
-        ingame.remove(e.getPlayer().getUniqueId());
+        if (!shuffleProfiles.containsKey(e.getPlayer().getUniqueId())) return;
+        shuffleProfiles.remove(e.getPlayer().getUniqueId());
         update();
     }
 
@@ -327,10 +392,22 @@ public final class BlockShuffle extends JavaPlugin implements Listener {
             return;
         }
 
+        String timestring = "";
+
+        if(shuffle.remaining >= 60) {
+            timestring = ((int) shuffle.remaining/60) + "m ";
+            timestring += shuffle.remaining - ((int) shuffle.remaining/60) * 60 + "s";
+        }
+
         String[] scoreboard = {
                 "",
-                String.format("&bPlayers remaining: &f%s", ingame.size()),
-                ""
+                "&bMode: " + difficulty.getPrefix(),
+                "",
+                "&bTime left: &f" + timestring + " seconds",
+                "",
+                String.format("&bPlayers remaining: &f%s", shuffleProfiles.size()),
+                "",
+                "&3play.reinforced.com"
         };
 
         e.getScoreboard().setLines(scoreboard);
