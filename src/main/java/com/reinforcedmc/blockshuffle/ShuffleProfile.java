@@ -62,6 +62,10 @@ public class ShuffleProfile {
 
         item.setItemMeta(meta);
 
+        if(item.getType() == Material.WATER) {
+            item.setType(Material.WATER_BUCKET);
+        }
+
         player.getInventory().setItem(4, item);
         player.sendMessage(ChatColor.YELLOW + "Your block is " + ChatColor.GOLD + name + "!");
         player.sendTitle(ChatColor.GOLD + name, "Your Block", 0, 100, 0);

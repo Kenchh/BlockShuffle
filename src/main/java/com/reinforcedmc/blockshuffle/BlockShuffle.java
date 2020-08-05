@@ -20,6 +20,8 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.File;
@@ -56,6 +58,8 @@ public class BlockShuffle extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onSetup(GameSetupEvent e) {
+        if(!GameAPI.getInstance().currentGame.getName().equalsIgnoreCase("BlockShuffle")) return;
+
         createWorld();
         e.openServer();
 
@@ -67,17 +71,17 @@ public class BlockShuffle extends JavaPlugin implements Listener {
 
     public void createWorld() {
 
-        if(Bukkit.getWorld("BlockShuffle") != null) {
-            Bukkit.unloadWorld("BlockShuffle", false);
+        if(Bukkit.getWorld("Game") != null) {
+            Bukkit.unloadWorld("Game", false);
         }
-        File folder = new File(Bukkit.getWorldContainer() + "/BlockShuffle");
+        File folder = new File(Bukkit.getWorldContainer() + "/Game");
         try {
             FileUtils.deleteDirectory(folder);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        WorldCreator creator = new WorldCreator("BlockShuffle");
+        WorldCreator creator = new WorldCreator("Game");
         creator.environment(World.Environment.NORMAL);
         creator.generateStructures(true);
         world = creator.createWorld();
@@ -89,6 +93,7 @@ public class BlockShuffle extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPreStart(GamePreStartEvent e) {
+        if(!GameAPI.getInstance().currentGame.getName().equalsIgnoreCase("BlockShuffle")) return;
 
         for (UUID game : GameAPI.getInstance().ingame) {
 
@@ -125,6 +130,8 @@ public class BlockShuffle extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onStart(GameStartEvent e) {
+        if(!GameAPI.getInstance().currentGame.getName().equalsIgnoreCase("BlockShuffle")) return;
+
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -156,8 +163,6 @@ public class BlockShuffle extends JavaPlugin implements Listener {
         return instance;
     }
 
-    static HashMap<Player, Player> players = new HashMap<>();
-
     public void assignBlocks() {
 
         if(getAlive().size() <= 1) {
@@ -167,19 +172,19 @@ public class BlockShuffle extends JavaPlugin implements Listener {
         round++;
 
         boolean changingdiff = false;
-        if(round == 3) {
+        if(round == 4) {
             difficulty = Difficulty.MEDIUM;
             changingdiff = true;
             sendDifficultyTitleAnimation(Difficulty.EASY.getPrefix() + "    ", difficulty.getPrefix());
         }
 
-        if(round == 5) {
+        if(round == 8) {
             difficulty = Difficulty.HARD;
             changingdiff = true;
             sendDifficultyTitleAnimation(Difficulty.MEDIUM.getPrefix() + "    ", difficulty.getPrefix());
         }
 
-        if(round == 8) {
+        if(round == 12) {
             difficulty = Difficulty.HARDCORE;
             changingdiff = true;
             sendDifficultyTitleAnimation(Difficulty.HARD.getPrefix() + "    ", difficulty.getPrefix());
@@ -289,6 +294,7 @@ public class BlockShuffle extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onTeleport(PlayerTeleportEvent e) {
+        if(!GameAPI.getInstance().currentGame.getName().equalsIgnoreCase("BlockShuffle")) return;
 
         if (e.getCause().equals(PlayerTeleportEvent.TeleportCause.END_PORTAL))
             e.setCancelled(true);
@@ -302,6 +308,8 @@ public class BlockShuffle extends JavaPlugin implements Listener {
      */
     @EventHandler
     public void onPvP(EntityDamageByEntityEvent e) {
+        if(!GameAPI.getInstance().currentGame.getName().equalsIgnoreCase("BlockShuffle")) return;
+
         if (!(e.getEntity() instanceof Player)) return;
         if (!(e.getDamager() instanceof Player)) return;
 
@@ -310,6 +318,8 @@ public class BlockShuffle extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onBreak(BlockBreakEvent e) {
+        if(!GameAPI.getInstance().currentGame.getName().equalsIgnoreCase("BlockShuffle")) return;
+
         if(GameAPI.getInstance().status == GameStatus.POSTCOUNTDOWN || GameAPI.getInstance().status == GameStatus.ENDING) {
             if(GameAPI.getInstance().ingame.contains(e.getPlayer().getUniqueId())) {
                 e.setCancelled(true);
@@ -319,6 +329,8 @@ public class BlockShuffle extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlace(BlockPlaceEvent e) {
+        if(!GameAPI.getInstance().currentGame.getName().equalsIgnoreCase("BlockShuffle")) return;
+
         if(GameAPI.getInstance().status == GameStatus.POSTCOUNTDOWN || GameAPI.getInstance().status == GameStatus.ENDING) {
             if(GameAPI.getInstance().ingame.contains(e.getPlayer().getUniqueId())) {
                 e.setCancelled(true);
@@ -343,6 +355,7 @@ public class BlockShuffle extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onClick(InventoryClickEvent e) {
+        if(!GameAPI.getInstance().currentGame.getName().equalsIgnoreCase("BlockShuffle")) return;
 
         if(GameAPI.getInstance().status != GameStatus.INGAME) return;
         if(!e.getCurrentItem().hasItemMeta()) return;
@@ -475,6 +488,8 @@ public class BlockShuffle extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent e) {
+        if(!GameAPI.getInstance().currentGame.getName().equalsIgnoreCase("BlockShuffle")) return;
+
         Player p = e.getPlayer();
 
         if (!getAlive().isEmpty()) {
@@ -489,6 +504,8 @@ public class BlockShuffle extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onLog(PlayerQuitEvent e) {
+        if(!GameAPI.getInstance().currentGame.getName().equalsIgnoreCase("BlockShuffle")) return;
+
         if (!shuffleProfiles.containsKey(e.getPlayer().getUniqueId())) return;
         shuffleProfiles.remove(e.getPlayer().getUniqueId());
         update();
@@ -501,7 +518,7 @@ public class BlockShuffle extends JavaPlugin implements Listener {
             return;
         }
 
-        String timestring = "";
+        String timestring;
 
         if(shuffle.remaining >= 60) {
             timestring = ((int) shuffle.remaining/60) + "m ";
