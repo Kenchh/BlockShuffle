@@ -1,6 +1,7 @@
 package com.reinforcedmc.blockshuffle;
 
 import com.reinforcedmc.gameapi.GameAPI;
+import com.reinforcedmc.gameapi.GameStatus;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Sound;
@@ -56,7 +57,7 @@ public class Shuffle extends BukkitRunnable {
                             }.runTaskLater(BlockShuffle.getInstance(), 3L);
                         }
 
-                        if(remaining > 5) {
+                        if(remaining > 5 || GameAPI.getInstance().status == GameStatus.ENDING) {
                             this.cancel();
                         }
 

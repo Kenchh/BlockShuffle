@@ -6,6 +6,7 @@ import com.reinforcedmc.gameapi.events.GamePreStartEvent;
 import com.reinforcedmc.gameapi.events.GameSetupEvent;
 import com.reinforcedmc.gameapi.events.GameStartEvent;
 import com.reinforcedmc.gameapi.scoreboard.UpdateScoreboardEvent;
+import org.apache.commons.io.FileUtils;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -16,11 +17,13 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
 public class BlockShuffle extends JavaPlugin implements Listener {
@@ -67,8 +70,12 @@ public class BlockShuffle extends JavaPlugin implements Listener {
         if(Bukkit.getWorld("BlockShuffle") != null) {
             Bukkit.unloadWorld("BlockShuffle", false);
         }
-        File folder = new File(Bukkit.getWorldContainer()+"/BlockShuffle");
-        folder.delete();
+        File folder = new File(Bukkit.getWorldContainer() + "/BlockShuffle");
+        try {
+            FileUtils.deleteDirectory(folder);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         WorldCreator creator = new WorldCreator("BlockShuffle");
         creator.environment(World.Environment.NORMAL);
@@ -127,7 +134,7 @@ public class BlockShuffle extends JavaPlugin implements Listener {
                         shuffleProfiles.put(uuid, new ShuffleProfile(uuid));
                     }
 
-                    shuffle = new Shuffle(30);
+                    shuffle = new Shuffle(45);
                     shuffle.start();
 
                     Bukkit.broadcastMessage(GameAPI.getInstance().currentGame.getPrefix() + ChatColor.GRAY + " has started. " + ChatColor.YELLOW + "The player who finds the most blocks wins!");
@@ -159,9 +166,24 @@ public class BlockShuffle extends JavaPlugin implements Listener {
 
         round++;
 
-        if(round == 3) difficulty = Difficulty.MEDIUM;
-        if(round == 5) difficulty = Difficulty.HARD;
-        if(round == 8) difficulty = Difficulty.HARDCORE;
+        boolean changingdiff = false;
+        if(round == 3) {
+            difficulty = Difficulty.MEDIUM;
+            changingdiff = true;
+            sendDifficultyTitleAnimation(Difficulty.EASY.getPrefix() + "    ", difficulty.getPrefix());
+        }
+
+        if(round == 5) {
+            difficulty = Difficulty.HARD;
+            changingdiff = true;
+            sendDifficultyTitleAnimation(Difficulty.MEDIUM.getPrefix() + "    ", difficulty.getPrefix());
+        }
+
+        if(round == 8) {
+            difficulty = Difficulty.HARDCORE;
+            changingdiff = true;
+            sendDifficultyTitleAnimation(Difficulty.HARD.getPrefix() + "    ", difficulty.getPrefix());
+        }
 
         if(difficulty != Difficulty.EASY) {
             shuffle.interval = 5*60;
@@ -169,16 +191,58 @@ public class BlockShuffle extends JavaPlugin implements Listener {
 
         shuffle.remaining = shuffle.interval;
 
-        for(ShuffleProfile sp : shuffleProfiles.values()) {
-            sp.setRandomBlock();
+        if(!changingdiff) {
+            for(ShuffleProfile sp : shuffleProfiles.values()) {
+                sp.setRandomBlock();
+            }
+        } else {
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    for(ShuffleProfile sp : shuffleProfiles.values()) {
+                        sp.setRandomBlock();
+                    }
+                }
+            }.runTaskLater(this, 70L);
         }
+
+    }
+
+    private void sendDifficultyTitleAnimation(String olddiff, String newdiff) {
+
+        new BukkitRunnable() {
+            String d1 = olddiff;
+            String d2 = "";
+            int i1 = olddiff.length()-4;
+            int i2 = newdiff.length()-4;
+            @Override
+            public void run() {
+
+                for(Player p : Bukkit.getOnlinePlayers()) {
+                    p.sendTitle("", ChatColor.translateAlternateColorCodes('&', d1 + d2), 0, 40, 0);
+                    for(int i=0;i<3;i++)
+                        p.playSound(p.getLocation(), Sound.ENTITY_CHICKEN_EGG, 1F, 1.2F);
+                }
+
+                if(i1 > 0 || i2 >= 0) {
+                    if(i1 > 0) {
+                        d1 = olddiff.substring(0, 4) + olddiff.substring(olddiff.length() - i1);
+                        i1--;
+                    } else {
+                        d1 = "";
+                    }
+                    if(i2 >= 0) {
+                        d2 = newdiff.substring(0, (newdiff.length() - i2));
+                        i2--;
+                    }
+                } else {
+                    cancel();
+                }
+            }
+        }.runTaskTimer(this, 0, 4);
     }
 
     public void shuffle() {
-
-        for(Player p : Bukkit.getOnlinePlayers()) {
-            p.playSound(p.getLocation(), Sound.ENTITY_BAT_TAKEOFF, 1F, 0.5F);
-        }
 
         int deadplayers = 0;
 
@@ -198,9 +262,18 @@ public class BlockShuffle extends JavaPlugin implements Listener {
                     sp.getPlayer().setHealth(0);
                 }
             }
-
-            assignBlocks();
         }
+
+        int finalDeadplayers = deadplayers;
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+
+                if(finalDeadplayers < getAlive().size()) {
+                    assignBlocks();
+                }
+            }
+        }.runTaskLater(this, 40L);
     }
 
     public static ArrayList<Player> getAlive() {
@@ -251,6 +324,57 @@ public class BlockShuffle extends JavaPlugin implements Listener {
                 e.setCancelled(true);
             }
         }
+
+        if(GameAPI.getInstance().status != GameStatus.INGAME) return;
+        if(!e.getItemInHand().hasItemMeta()) return;
+        if(!e.getItemInHand().getItemMeta().hasDisplayName()) return;
+        if(!e.getItemInHand().getItemMeta().hasLore()) return;
+
+        boolean block = false;
+        for(String s : e.getItemInHand().getItemMeta().getLore()) {
+            if(s.contains("Your Block")) {
+                block = true;
+            }
+        }
+
+        if(block) e.setCancelled(true);
+
+    }
+
+    @EventHandler
+    public void onClick(InventoryClickEvent e) {
+
+        if(GameAPI.getInstance().status != GameStatus.INGAME) return;
+        if(!e.getCurrentItem().hasItemMeta()) return;
+        if(!e.getCurrentItem().getItemMeta().hasDisplayName()) return;
+        if(!e.getCurrentItem().getItemMeta().hasLore()) return;
+
+        boolean block = false;
+        for(String s : e.getCurrentItem().getItemMeta().getLore()) {
+            if(s.contains("Your Block")) {
+                block = true;
+            }
+        }
+
+        if(block) e.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onDrop(PlayerDropItemEvent e) {
+
+        if(GameAPI.getInstance().status != GameStatus.INGAME) return;
+        if(!e.getItemDrop().getItemStack().hasItemMeta()) return;
+        if(!e.getItemDrop().getItemStack().getItemMeta().hasDisplayName()) return;
+        if(!e.getItemDrop().getItemStack().getItemMeta().hasLore()) return;
+
+        boolean block = false;
+        for(String s : e.getItemDrop().getItemStack().getItemMeta().getLore()) {
+            if(s.contains("Your Block")) {
+                block = true;
+            }
+        }
+
+        if(block) e.setCancelled(true);
     }
 
     @EventHandler
@@ -286,12 +410,7 @@ public class BlockShuffle extends JavaPlugin implements Listener {
                     if(allfound) {
                         Bukkit.broadcastMessage(ChatColor.GOLD + "Everyone has found their block!");
                         shuffle.remaining = shuffle.interval;
-                        new BukkitRunnable() {
-                            @Override
-                            public void run() {
-                                shuffle();
-                            }
-                        }.runTaskLater(this, 40L);
+                        shuffle();
                     }
 
                 }
@@ -387,17 +506,19 @@ public class BlockShuffle extends JavaPlugin implements Listener {
         if(shuffle.remaining >= 60) {
             timestring = ((int) shuffle.remaining/60) + "m ";
             timestring += shuffle.remaining - ((int) shuffle.remaining/60) * 60 + "s";
+        } else {
+            timestring = shuffle.remaining + "s";
         }
 
         String[] scoreboard = {
                 "",
-                "&bMode: " + difficulty.getPrefix(),
+                "&bLevel: " + difficulty.getPrefix(),
                 "",
-                "&bTime left: &f" + timestring + " seconds",
+                "&bTime left: &f" + timestring,
                 "",
                 String.format("&bPlayers remaining: &f%s", shuffleProfiles.size()),
                 "",
-                "&3play.reinforced.com"
+                " &bplay.reinforcedmc.com"
         };
 
         e.getScoreboard().setLines(scoreboard);
