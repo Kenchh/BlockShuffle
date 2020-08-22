@@ -141,7 +141,7 @@ public class BlockShuffle extends JavaPlugin implements Listener {
                         shuffleProfiles.put(uuid, new ShuffleProfile(uuid));
                     }
 
-                    shuffle = new Shuffle(45);
+                    shuffle = new Shuffle(60*3);
                     shuffle.start();
 
                     Bukkit.broadcastMessage(GameAPI.getInstance().currentGame.getPrefix() + ChatColor.GRAY + " has started. " + ChatColor.YELLOW + "The player who finds the most blocks wins!");
@@ -535,7 +535,7 @@ public class BlockShuffle extends JavaPlugin implements Listener {
                 "",
                 String.format("&bPlayers remaining: &f%s", shuffleProfiles.size()),
                 "",
-                " &bplay.reinforcedmc.com"
+                "&bplay.reinforcedmc.com"
         };
 
         e.getScoreboard().setLines(scoreboard);
