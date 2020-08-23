@@ -2,6 +2,7 @@ package com.reinforcedmc.blockshuffle;
 
 import com.reinforcedmc.gameapi.GameAPI;
 import com.reinforcedmc.gameapi.GameStatus;
+import com.reinforcedmc.gameapi.api.GameWorld;
 import com.reinforcedmc.gameapi.events.GamePreStartEvent;
 import com.reinforcedmc.gameapi.events.GameSetupEvent;
 import com.reinforcedmc.gameapi.events.GameStartEvent;
@@ -36,11 +37,9 @@ public class BlockShuffle extends JavaPlugin implements Listener {
     public static Difficulty difficulty = Difficulty.EASY;
     public static int round = 1;
 
-    private static BlockShuffle instance;
+    private GameWorld gameWorld;
 
-    private World world;
-    private Location spawn;
-    private long maxRadius;
+    private static BlockShuffle instance;
 
     @Override
     public void onEnable() {
@@ -60,7 +59,7 @@ public class BlockShuffle extends JavaPlugin implements Listener {
     public void onSetup(GameSetupEvent e) {
         if(!GameAPI.getInstance().currentGame.getName().equalsIgnoreCase("BlockShuffle")) return;
 
-        createWorld();
+        gameWorld = new GameWorld("Game", 250);
         e.openServer();
 
         difficulty = Difficulty.EASY;
@@ -69,61 +68,11 @@ public class BlockShuffle extends JavaPlugin implements Listener {
 
     }
 
-    public void createWorld() {
-
-        if(Bukkit.getWorld("Game") != null) {
-            Bukkit.unloadWorld("Game", false);
-        }
-        File folder = new File(Bukkit.getWorldContainer() + "/Game");
-        try {
-            FileUtils.deleteDirectory(folder);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        WorldCreator creator = new WorldCreator("Game");
-        creator.environment(World.Environment.NORMAL);
-        creator.generateStructures(true);
-        world = creator.createWorld();
-
-        spawn = new Location(world, 0, 0, 0);
-        maxRadius = 250;
-
-    }
-
     @EventHandler
     public void onPreStart(GamePreStartEvent e) {
         if(!GameAPI.getInstance().currentGame.getName().equalsIgnoreCase("BlockShuffle")) return;
 
-        for (UUID game : GameAPI.getInstance().ingame) {
-
-            Player p = Bukkit.getServer().getPlayer(game);
-            if (p == null || !p.isOnline()) continue;
-
-            boolean notocean = false;
-
-            Location location = Bukkit.getWorld("BlockShuffle").getSpawnLocation();
-
-            while(!notocean) {
-                location = new Location(world, 0, 0, 0); // New Location in the right World you want
-                location.setX(spawn.getX() + Math.random() * maxRadius * 2 - maxRadius); // This get a Random with a MaxRange
-                location.setZ(spawn.getZ() + Math.random() * maxRadius * 2 - maxRadius);
-
-                Block highest = world.getHighestBlockAt(location.getBlockX(), location.getBlockZ());
-
-                if(highest.isLiquid()) {
-                    maxRadius += 100;
-                    continue;
-                }
-
-                notocean = true;
-                location.setY(highest.getY() + 1); // Get the Highest Block of the Location for Save Spawn.
-            }
-
-            p.teleport(location);
-
-        }
-
+        gameWorld.teleportPlayers();
         new com.reinforcedmc.gameapi.GamePostCountDown().start();
 
     }
