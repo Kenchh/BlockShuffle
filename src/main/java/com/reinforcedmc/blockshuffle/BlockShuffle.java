@@ -1,32 +1,28 @@
 package com.reinforcedmc.blockshuffle;
 
 import com.reinforcedmc.gameapi.GameAPI;
-import com.reinforcedmc.gameapi.GameStatus;
 import com.reinforcedmc.gameapi.api.GameWorld;
-import com.reinforcedmc.gameapi.events.GamePreStartEvent;
-import com.reinforcedmc.gameapi.events.GameSetupEvent;
-import com.reinforcedmc.gameapi.events.GameStartEvent;
+import com.reinforcedmc.gameapi.events.api.GamePreStartEvent;
+import com.reinforcedmc.gameapi.events.api.GameSetupEvent;
+import com.reinforcedmc.gameapi.events.api.GameStartEvent;
+import com.reinforcedmc.gameapi.game.GamePostCountDown;
+import com.reinforcedmc.gameapi.game.GameStatus;
 import com.reinforcedmc.gameapi.scoreboard.UpdateScoreboardEvent;
-import org.apache.commons.io.FileUtils;
-import org.bukkit.*;
-import org.bukkit.block.Block;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Sound;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.*;
 
 public class BlockShuffle extends JavaPlugin implements Listener {
@@ -73,7 +69,7 @@ public class BlockShuffle extends JavaPlugin implements Listener {
         if(!GameAPI.getInstance().currentGame.getName().equalsIgnoreCase("BlockShuffle")) return;
 
         gameWorld.teleportPlayers();
-        new com.reinforcedmc.gameapi.GamePostCountDown().start();
+        new GamePostCountDown().start();
 
     }
 
@@ -242,49 +238,8 @@ public class BlockShuffle extends JavaPlugin implements Listener {
     }
 
     @EventHandler
-    public void onTeleport(PlayerTeleportEvent e) {
-        if(!GameAPI.getInstance().currentGame.getName().equalsIgnoreCase("BlockShuffle")) return;
-
-        if (e.getCause().equals(PlayerTeleportEvent.TeleportCause.END_PORTAL))
-            e.setCancelled(true);
-        if (e.getCause().equals(PlayerTeleportEvent.TeleportCause.END_GATEWAY))
-            e.setCancelled(true);
-
-    }
-
-    /*
-    PVP CANCEL
-     */
-    @EventHandler
-    public void onPvP(EntityDamageByEntityEvent e) {
-        if(!GameAPI.getInstance().currentGame.getName().equalsIgnoreCase("BlockShuffle")) return;
-
-        if (!(e.getEntity() instanceof Player)) return;
-        if (!(e.getDamager() instanceof Player)) return;
-
-        e.setCancelled(true);
-    }
-
-    @EventHandler
-    public void onBreak(BlockBreakEvent e) {
-        if(!GameAPI.getInstance().currentGame.getName().equalsIgnoreCase("BlockShuffle")) return;
-
-        if(GameAPI.getInstance().status == GameStatus.POSTCOUNTDOWN || GameAPI.getInstance().status == GameStatus.ENDING) {
-            if(GameAPI.getInstance().ingame.contains(e.getPlayer().getUniqueId())) {
-                e.setCancelled(true);
-            }
-        }
-    }
-
-    @EventHandler
     public void onPlace(BlockPlaceEvent e) {
         if(!GameAPI.getInstance().currentGame.getName().equalsIgnoreCase("BlockShuffle")) return;
-
-        if(GameAPI.getInstance().status == GameStatus.POSTCOUNTDOWN || GameAPI.getInstance().status == GameStatus.ENDING) {
-            if(GameAPI.getInstance().ingame.contains(e.getPlayer().getUniqueId())) {
-                e.setCancelled(true);
-            }
-        }
 
         if(GameAPI.getInstance().status != GameStatus.INGAME) return;
         if(!e.getItemInHand().hasItemMeta()) return;
